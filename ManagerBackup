@@ -1,0 +1,36 @@
+#!/bin/bash
+
+BACKUP_DIR="/home/ubuntu/backup"
+BACKUP_FILE="$BACKUP_DIR/manager_backup_$(date +%Y%m%d_%H%M).tar.gz"
+BACKUP_SERVER="ubuntu@192.168.129.22"
+BACKUP_DEST="/mnt/backups"
+
+mkdir -p $BACKUP_DIR
+
+# Samle filer
+tar -czf $BACKUP_FILE \
+    /home/ubuntu/.ssh \
+    /etc/ssh/sshd_config \
+    /etc/systemd/system \
+    /etc/supervisor \
+    /var/spool/cron/crontabs \
+    /home/ubuntu/scripts \
+    /etc/ansible \
+    /var/lib/cloud \
+    /etc/docker/daemon.json \
+    /etc/k8s_backup.yaml \
+    /var/log/auth.log /var/log/syslog \
+    /etc/fstab /boot/grub/grub.cfg /etc/hostname /etc/hosts
+
+# Overfør til backup-server
+scp $BACKUP_FILE $BACKUP_SERVER:$BACKUP_DEST/
+
+if [ $? -eq 0 ]; then
+    echo "✅ Backup vellykket: $BACKUP_FILE"
+else
+    echo "❌ Feil under backup-overføring!"
+fi
+
+# Slett lokal backup
+rm -rf "$BACKUP_DIR"/*
+

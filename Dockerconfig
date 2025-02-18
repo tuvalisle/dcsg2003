@@ -1,0 +1,50 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - ca-certificates
+  - curl
+  - apt-transport-https
+  - gnupg
+ 
+write_files:
+  - path: /tmp/setup-docker.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      set -e  # Exit on any error
+ 
+      # Wait for APT to finish any background updates
+      while sudo ps aux | grep -E 'apt|dpkg' | grep -v grep >/dev/null; do
+        echo "Waiting for APT to finish..."
+        sleep 10
+      done
+ 
+      # Ensure APT is in a clean state
+      sudo dpkg --configure -a
+      sudo apt-get install -f
+      sudo apt-get update
+ 
+      # Install dependencies
+      sudo apt-get install -y ca-certificates curl apt-transport-https gnupg
+ 
+      # Add Docker GPG key and repository
+      sudo install -m 0755 -d /etc/apt/keyrings
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo tee /etc/apt/keyrings/docker.asc >/dev/null
+      sudo chmod a+r /etc/apt/keyrings/docker.asc
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | \
+      sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+ 
+      # Install Docker
+      sudo apt-get update
+      sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+ 
+      # Enable and start Docker
+      sudo systemctl enable docker
+      sudo systemctl start docker
+ 
+runcmd:
+  - [bash, -c, "while ps aux | grep -E 'apt|dpkg' | grep -v grep >/dev/null; do sleep 10; done"]
+  - [chmod, +x, /tmp/setup-docker.sh]
+  - [/tmp/setup-docker.sh]
+has context menu
